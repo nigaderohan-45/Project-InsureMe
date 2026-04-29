@@ -31,7 +31,7 @@ public class DemoController {
 	public Policy createPolicy(@RequestBody Policy policy) {
 		return demoService.createPolicy(policy);
 	}
-	
+	//chagneges
 	@PutMapping("/updatePolicy/{polId}")
 	public Policy updatePolicy(@PathVariable(value="polId")int polId, @RequestBody Policy polDetails) {
 		return demoService.updatePolicy(polId, polDetails);
