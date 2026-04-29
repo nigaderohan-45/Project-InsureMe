@@ -12,7 +12,7 @@ pipeline {
         warFile = "target/Insurance-0.0.1-SNAPSHOT.jar"
     }
 
-    stages {
+    stages { 
 
         stage('code-pull') {
             steps {
