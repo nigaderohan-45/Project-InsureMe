@@ -1,5 +1,5 @@
 pipeline {
-    agent any
+    agent any 
 
     tools {
         maven 'maven'
@@ -10,7 +10,6 @@ pipeline {
         S3_BUCKET = "project-insure-me-build-artifacts-b31"
         REGION = "us-east-2"
         warFile = "target/Insurance-0.0.1-SNAPSHOT.jar"
-        IMAGE_NAME = "abhipraydh96/insure-b31"
     }
 
     stages {
@@ -26,41 +25,57 @@ pipeline {
                 sh 'mvn clean package'
             }
         }
+        
+         stage('code-push'){
+            steps{
+                withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'aws-cred', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                   sh 'aws s3 cp ${warFile} s3://${S3_BUCKET}/Artifacts/ --region ${REGION}'
+                 }
+            }
+        }
 
-        stage('code-push') {
+        stage("code-test-analysis") {
             steps {
-                withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                credentialsId: 'aws-cred',
-                secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    sh 'aws s3 cp ${warFile} s3://${S3_BUCKET}/Artifacts/ --region ${REGION}'
+                withSonarQubeEnv('sonar-server') {
+                    sh '''
+                        $SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectKey=InsureMe \
+                        -Dsonar.projectName=InsureMe \
+                        -Dsonar.sources=src \
+                        -Dsonar.java.binaries=target/classes
+                    '''
                 }
             }
         }
 
-        stage('docker-image') {
+        stage("code-test-quality gate") {
             steps {
-                sh 'docker build -t ${IMAGE_NAME}:v${BUILD_NUMBER} .'
-            }
-        }
-
-        stage('image-push') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'docker-cred',
-                    passwordVariable: 'dockerHubPassword',
-                    usernameVariable: 'dockerHubUser')]) {
-
-                    sh 'docker login -u ${dockerHubUser} -p ${dockerHubPassword}'
-                    sh 'docker push ${IMAGE_NAME}:v${BUILD_NUMBER}'
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
                 }
             }
         }
-
-        stage('code-deploy') {
-            steps {
-                sh 'docker rm -f insure-me || true'
-                sh 'docker run -d --name insure-me -p 8089:8089 ${IMAGE_NAME}:v${BUILD_NUMBER}'
+     stage('docker-image'){
+            steps{
+                sh 'docker build -t abhipraydh96/insure-b31 .'
+                
             }
         }
+        
+        stage('image-push'){
+            steps {
+       	       withCredentials([usernamePassword(credentialsId: 'docker-cred', passwordVariable: 'dockerHubPassword', usernameVariable: 'dockerHubUser')]) {
+            	sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPassword}"
+                sh 'docker push abhipraydh96/insure-b31'
+               }
+            }
+        } 
+        
+        stage('code-deploy'){
+            steps{
+                sh 'docker run -itd --name insure-me -p 8089:8081 abhipraydh96/insure-b31'
+            }
+        }
+
     }
 }
