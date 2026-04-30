@@ -9,7 +9,7 @@ pipeline {
         SCANNER_HOME = tool 'sonar-scanner'
         S3_BUCKET = "project-insure-me-build-artifacts-b31"
         REGION = "us-east-2"
-        warFile = "target/Insurance-0.0.1-SNAPSHOT.jar"
+        warFile = "target/Insurance-0.0.1-SNAPSHOT.jar" 
     }
 
     stages { 
