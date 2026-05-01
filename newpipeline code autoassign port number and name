@@ -4,7 +4,7 @@ pipeline {
         maven 'maven-3'
     }
     environment {
-     S3_BUCKET = "mario-db-01"
+     S3_BUCKET = "mario-db-01" 
      REGION = "ap-southeast-1"
      warFile = "target/Insurance-0.0.1-SNAPSHOT.jar"
      }
